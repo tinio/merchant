@@ -196,6 +196,7 @@ class AuthorizeNetGateway(Gateway):
 
         response = self.commit("AUTH_CAPTURE", money, post)
         status = "SUCCESS"
+        transaction_id = None
         if response.response_code != 1:
             status = "FAILURE"
             transaction_was_unsuccessful.send(sender=self, 
@@ -205,7 +206,9 @@ class AuthorizeNetGateway(Gateway):
             transaction_was_successful.send(sender=self,
                                             type="purchase",
                                             response=response)
-        return {"status": status, "response": response}
+            if hasattr(response, 'transaction_id'):
+                transaction_id = response.transaction_id
+        return {"status": status, "transaction_id": transaction_id, "response": response}
     
     def authorize(self, money, credit_card, options = None):
         """Using Authorize.net payment gateway, authorize the
@@ -345,6 +348,7 @@ class AuthorizeNetGateway(Gateway):
         #                                    u'subscriptionId': u'933728'}}
         
         status = "SUCCESS"
+        subscription_id = None
         if response['messages']['resultCode'].lower() != 'ok':
             status = "FAILURE"
             transaction_was_unsuccessful.send(sender=self,
@@ -354,7 +358,9 @@ class AuthorizeNetGateway(Gateway):
             transaction_was_successful.send(sender=self,
                                             type="recurring",
                                             response=response)
-        return {"status": status, "response": response}
+            if 'subscriptionId' in response:
+                subscription_id = response['subscriptionId']
+        return {"status": status, 'subscription_id': subscription_id, "response": response}
 
     def store(self, creditcard, options = None):
         raise NotImplementedError
