@@ -217,17 +217,21 @@ class BraintreePaymentsGateway(Gateway):
             "payment_method_token": payment_token,
             })
         response = braintree.Subscription.create(request_hash)
+        subscription_id = None
         if response.is_success:
             status = "SUCCESS"
             transaction_was_successful.send(sender=self,
                                             type="recurring",
                                             response=response)
+            if (hasattr(response, 'subscription') and 
+                hasattr(response.subscription, 'id')):
+                subscription_id = response.subscription.id
         else:
             status = "FAILURE"
             transaction_was_unsuccessful.send(sender=self,
                                               type="recurring",
                                               response=response)
-        return {"status": status, "response": response}
+        return {"status": status, "subscription_id": subscription_id, "response": response}
 
     def store(self, credit_card, options = None):
         if not options:
